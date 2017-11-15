@@ -496,7 +496,7 @@ def readCommand( argv ):
                       metavar='LAYOUT_FILE', default='mediumClassic')
     parser.add_option('-p', '--pacman', dest='pacman',
                       help=default('the agent TYPE in the pacmanAgents module to use'),
-                      metavar='TYPE', default='KeyboardAgent')
+                      metavar='TYPE', default='PacmanQAgent')
     parser.add_option('-t', '--textGraphics', action='store_true', dest='textGraphics',
                       help='Display output as text only', default=False)
     parser.add_option('-q', '--quietTextGraphics', action='store_true', dest='quietGraphics',
@@ -511,7 +511,7 @@ def readCommand( argv ):
     parser.add_option('-f', '--fixRandomSeed', action='store_true', dest='fixRandomSeed',
                       help='Fixes the random seed to always play the same game', default=False)
     parser.add_option('-r', '--recordActions', action='store_true', dest='record',
-                      help='Writes game histories to a file (named by the time they were played)', default=False)
+                      help='Writes game histories to a file (named by the time they were played)', default=True)
     parser.add_option('--replay', dest='gameToReplay',
                       help='A recorded game file (pickle) to replay', default=None)
     parser.add_option('-a','--agentArgs',dest='agentArgs',
@@ -524,9 +524,12 @@ def readCommand( argv ):
                       help='Turns on exception handling and timeouts during games', default=False)
     parser.add_option('--timeout', dest='timeout', type='int',
                       help=default('Maximum length of time an agent can spend computing in a single game'), default=30)
-    parser.add_option('-e', '--expID', action='store', dest="exp",type='string',)
-    parser.add_option('-s', '--save', action='store_true', dest='saveModel', default=True)
-    parser.add_option('--loadPreAgent', action='store', dest='agentFile', type='string', default=None)
+    parser.add_option('-e', '--expID', action='store', dest="exp",type='string',
+                    help=default('Specify experiment id'))
+    parser.add_option('-s', '--save', action='store_true', dest='saveModel',
+                    help=default('Save model or not'), default=True)
+    parser.add_option('--loadPreAgent', action='store', dest='agentFile', type='string',
+                    help=default('Path to the model'), default=None)
 
 
     options, otherjunk = parser.parse_args(argv)
@@ -550,12 +553,13 @@ def readCommand( argv ):
         if 'numTraining' not in agentOpts: agentOpts['numTraining'] = options.numTraining
     pacman = pacmanType(**agentOpts) # Instantiate Pacman with agentArgs
     args['pacman'] = pacman
-    if loadPreAgent != None:
-        print '==> Loading Pacman Agent from %s.' % options.loadPreAgent
-        import cPickle
-        f = open(options.loadPreAgent)
+    if options.agentFile != None:
+        print '==> Loading Pacman Agent from %s' % options.agentFile
+        import dill
+        import pickle
+        f = open(options.agentFile,'rb')
         try: 
-            pacman = cPickle.load(f)
+            pacman = pickle.load(f)
             args['pacman'] = pacman
             print '-- Successfully Loaded.'
         finally: f.close()
@@ -673,12 +677,14 @@ def runGames( layout, pacman, ghosts, display, numGames, record, exp, saveModel,
                 cPickle.dump(components, f)
                 f.close()
             if saveModel:
-                import cPickle
+                import dill
+                import pickle
                 fname = ('./records/'+exp+'/Agent-%d' % (i + 1))
-                f = file(fname, 'w')
-                components = {'layout': layout, 'actions': game.agents[0]}
-                cPickle.dump(components, f)
+                f = file(fname, 'wb')
+                tmp_pacman = game.agents[0]
+                pickle.dump(tmp_pacman, f)
                 f.close()
+                print("-- Save model in ==> %s" % fname)
 
     if (numGames-numTraining) > 0:
         scores = [game.state.getScore() for game in games]
