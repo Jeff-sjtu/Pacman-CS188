@@ -503,7 +503,7 @@ def readCommand( argv ):
                       help='Generate minimal output and no graphics', default=False)
     parser.add_option('-g', '--ghosts', dest='ghost',
                       help=default('the ghost agent TYPE in the ghostAgents module to use'),
-                      metavar = 'TYPE', default='RandomGhost')
+                      metavar = 'TYPE', default='DirectionalGhost')
     parser.add_option('-k', '--numghosts', type='int', dest='numGhosts',
                       help=default('The maximum number of ghosts to use'), default=4)
     parser.add_option('-z', '--zoom', type='float', dest='zoom',
@@ -525,6 +525,9 @@ def readCommand( argv ):
     parser.add_option('--timeout', dest='timeout', type='int',
                       help=default('Maximum length of time an agent can spend computing in a single game'), default=30)
     parser.add_option('-e', '--expID', action='store', dest="exp",type='string',)
+    parser.add_option('-s', '--save', action='store_true', dest='saveModel', default=True)
+    parser.add_option('--loadPreAgent', action='store', dest='agentFile', type='string', default=None)
+
 
     options, otherjunk = parser.parse_args(argv)
     if len(otherjunk) != 0:
@@ -547,7 +550,16 @@ def readCommand( argv ):
         if 'numTraining' not in agentOpts: agentOpts['numTraining'] = options.numTraining
     pacman = pacmanType(**agentOpts) # Instantiate Pacman with agentArgs
     args['pacman'] = pacman
-
+    if loadPreAgent != None:
+        print '==> Loading Pacman Agent from %s.' % options.loadPreAgent
+        import cPickle
+        f = open(options.loadPreAgent)
+        try: 
+            pacman = cPickle.load(f)
+            args['pacman'] = pacman
+            print '-- Successfully Loaded.'
+        finally: f.close()
+        
     # Don't display training games
     if 'numTrain' in agentOpts:
         options.numQuiet = int(agentOpts['numTrain'])
@@ -573,6 +585,7 @@ def readCommand( argv ):
     args['catchExceptions'] = options.catchExceptions
     args['timeout'] = options.timeout
     args['exp'] = options.exp
+    args['saveModel'] = options.saveModel
 
     # Special case: recorded games don't use the runGames method or args structure
     if options.gameToReplay != None:
@@ -628,7 +641,7 @@ def replayGame( layout, actions, display ):
 
     display.finish()
 
-def runGames( layout, pacman, ghosts, display, numGames, record, exp, numTraining = 0, catchExceptions=False, timeout=30):
+def runGames( layout, pacman, ghosts, display, numGames, record, exp, saveModel, numTraining = 0, catchExceptions=False, timeout=30):
     import __main__
     __main__.__dict__['_display'] = display
 
@@ -648,13 +661,24 @@ def runGames( layout, pacman, ghosts, display, numGames, record, exp, numTrainin
         game.run()
         if not beQuiet: games.append(game)
 
-        if record and (i+1)%5000==0:
-            import time, cPickle
-            fname = ('./records/'+exp+'/recorded-game-%d' % (i + 1)) +  '-'.join([str(t) for t in time.localtime()[1:6]])
-            f = file(fname, 'w')
-            components = {'layout': layout, 'actions': game.moveHistory}
-            cPickle.dump(components, f)
-            f.close()
+        if exp and (os.path.exists('./records/'+exp+"/") == False):
+            os.mkdir('./records/'+exp+"/")
+
+        if (i+1)%5000==0:
+            if record :
+                import time, cPickle
+                fname = ('./records/'+exp+'/recorded-game-%d' % (i + 1)) +  '-'.join([str(t) for t in time.localtime()[1:6]])
+                f = file(fname, 'w')
+                components = {'layout': layout, 'actions': game.moveHistory}
+                cPickle.dump(components, f)
+                f.close()
+            if saveModel:
+                import cPickle
+                fname = ('./records/'+exp+'/Agent-%d' % (i + 1))
+                f = file(fname, 'w')
+                components = {'layout': layout, 'actions': game.agents[0]}
+                cPickle.dump(components, f)
+                f.close()
 
     if (numGames-numTraining) > 0:
         scores = [game.state.getScore() for game in games]
@@ -664,6 +688,15 @@ def runGames( layout, pacman, ghosts, display, numGames, record, exp, numTrainin
         print 'Scores:       ', ', '.join([str(score) for score in scores])
         print 'Win Rate:      %d/%d (%.2f)' % (wins.count(True), len(wins), winRate)
         print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
+
+    final_game = games[-1]
+    if saveModel:
+        import cPickle
+        fname = ('./records/'+exp+'/Agent-Final')
+        f = file(fname, 'w')
+        components = {'layout': layout, 'actions': final_game.agents[0]}
+        cPickle.dump(components, f)
+        f.close()
 
     return games
 
