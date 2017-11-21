@@ -696,6 +696,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, exp, saveModel,
         print 'Record:       ', ', '.join([ ['Loss', 'Win'][int(w)] for w in wins])
 
     final_game = games[-1]
+    
     if saveModel:
         import cPickle
         fname = ('./records/'+exp+'/Agent-Final')

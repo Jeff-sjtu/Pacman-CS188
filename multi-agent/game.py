@@ -570,7 +570,7 @@ class Game:
         """
         self.display.initialize(self.state.data)
         self.numMoves = 0
-
+        raw_input()
         ###self.display.initialize(self.state.makeObservation(1).data)
         # inform learning agents of the game start
         for i in range(len(self.agents)):
@@ -685,8 +685,11 @@ class Game:
             else:
                 action = agent.getAction(observation)
             self.unmute()
-
+            # Action is 'North', 'West', 'South', 'East' and 'Stop'
             # Execute the action
+            videoFlag = True
+            if (not videoFlag) and agentIndex == 0: action='Stop' 
+
             self.moveHistory.append( (agentIndex, action) )
             if self.catchExceptions:
                 try:

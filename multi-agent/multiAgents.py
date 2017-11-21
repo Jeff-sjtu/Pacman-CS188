@@ -74,11 +74,13 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         WEIGHT_FOOD = 10.0
-        WEIGHT_GHOST = 10.0
+        WEIGHT_GHOST = 12.0
 
         value = successorGameState.getScore()
 
         distanceToGhost = manhattanDistance(newPos, newGhostStates[0].getPosition())
+        theWall = currentGameState.getWall()
+        
         if distanceToGhost > 0:
             value -= WEIGHT_GHOST / distanceToGhost
 
